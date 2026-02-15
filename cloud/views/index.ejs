@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Print Manager | Pay & Print</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <style>
+        :root {
+            --primary: #1a56db;
+            --primary-light: #3b82f6;
+            --text-primary: #111827;
+            --text-secondary: #6b7280;
+            --bg-main: #f9fafb;
+            --border: #e5e7eb;
+            --card-bg: #ffffff;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            color: var(--text-primary);
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.025em;
+        }
+
+        .header h1 i {
+            color: var(--primary);
+            margin-right: 0.5rem;
+        }
+
+        .header p {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: var(--shadow-xl);
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        /* Progress Steps */
+        .progress-container {
+            background: var(--bg-main);
+            padding: 2rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+            margin-bottom: 1rem;
+        }
+
+        .progress-steps::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--border);
+            z-index: 0;
+        }
+
+        .progress-line {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            height: 2px;
+            background: var(--primary);
+            transition: width 0.3s ease;
+            z-index: 1;
+        }
+
+        .step {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            flex: 1;
+        }
+
+        .step-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--card-bg);
+            border: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 0.5rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            transition: all 0.3s ease;
+            font-size: 0.9375rem;
+        }
+
+        .step.active .step-circle {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 0 0 4px rgba(26, 86, 219, 0.1);
+        }
+
+        .step.completed .step-circle {
+            border-color: var(--primary);
+            background: var(--card-bg);
+            color: var(--primary);
+        }
+
+        .step-label {
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .step.active .step-label {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        /* Form Content */
+        .form-content {
+            padding: 2.5rem;
+        }
+
+        .step-content {
+            display: none;
+        }
+
+        .step-content.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .step-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.025em;
+        }
+
+        .step-description {
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            font-size: 0.9375rem;
+        }
+
+        /* Upload Area */
+        .upload-area {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 3rem 2rem;
+            text-align: center;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            margin-bottom: 1.5rem;
+            background: var(--bg-main);
+        }
+
+        .upload-area:hover {
+            border-color: var(--primary);
+            background: rgba(26, 86, 219, 0.02);
+        }
+
+        .upload-area.drag-over {
+            border-color: var(--primary);
+            background: rgba(26, 86, 219, 0.05);
+            border-style: solid;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            opacity: 0.9;
+        }
+
+        .upload-text {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-hint {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .selected-file {
+            background: var(--bg-main);
+            padding: 1.25rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            display: none;
+            align-items: center;
+            gap: 1rem;
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--primary);
+        }
+
+        .selected-file.show {
+            display: flex;
+        }
+
+        .file-info {
+            flex: 1;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+            font-size: 0.9375rem;
+        }
+
+        .file-meta {
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+        }
+
+        /* Form Controls */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.9375rem;
+            transition: all 0.2s ease;
+            background: var(--card-bg);
+            font-family: inherit;
+            color: var(--text-primary);
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.1);
+        }
+
+        /* Copies Selector */
+        .copies-selector {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            justify-content: center;
+            margin: 2.5rem 0;
+        }
+
+        .copies-btn {
+            width: 48px;
+            height: 48px;
+            border: 1px solid var(--border);
+            background: white;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 1.125rem;
+            color: var(--text-primary);
+        }
+
+        .copies-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: rgba(26, 86, 219, 0.05);
+        }
+
+        .copies-btn:active {
+            transform: scale(0.95);
+        }
+
+        .copies-display {
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            min-width: 100px;
+            text-align: center;
+            letter-spacing: -0.025em;
+        }
+
+        /* Pricing Card */
+        .pricing-card {
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            padding: 2rem;
+            border-radius: 8px;
+            margin-top: 2rem;
+        }
+
+        .pricing-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .pricing-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+            padding-top: 1rem;
+            border-top: 2px solid var(--border);
+        }
+
+        .pricing-label {
+            font-size: 0.9375rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .pricing-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .pricing-row:last-child .pricing-label {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .pricing-row:last-child .pricing-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        /* Buttons */
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 0.875rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.9375rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-light);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary:disabled {
+            background: var(--text-secondary);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+            opacity: 0.6;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-main);
+            border-color: var(--text-secondary);
+        }
+
+        .btn-success {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: var(--primary-light);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        /* Success Step */
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            color: white;
+            font-size: 2.5rem;
+            animation: scaleIn 0.4s ease;
+        }
+
+        @keyframes scaleIn {
+            from {
+                transform: scale(0);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .success-content {
+            text-align: center;
+        }
+
+        .success-details {
+            background: var(--bg-main);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 2rem 0;
+            text-align: left;
+            border: 1px solid var(--border);
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+
+        .detail-value {
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 0.9375rem;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 0.6s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--primary);
+            box-shadow: var(--shadow-xl);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            max-width: 350px;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            border-left-color: var(--primary);
+        }
+
+        .notification.error {
+            border-left-color: #dc2626;
+        }
+
+        .notification-icon {
+            font-size: 1.125rem;
+            color: var(--primary);
+        }
+
+        .notification.error .notification-icon {
+            color: #dc2626;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .header p {
+                font-size: 0.875rem;
+            }
+
+            .form-content {
+                padding: 1.5rem;
+            }
+
+            .progress-container {
+                padding: 1.5rem 1rem;
+            }
+
+            .step-label {
+                font-size: 0.75rem;
+            }
+
+            .btn-group {
+                flex-direction: column;
+            }
+
+            .copies-display {
+                font-size: 2.5rem;
+            }
+
+            .upload-area {
+                padding: 2rem 1rem;
+            }
+
+            .upload-icon {
+                font-size: 2.5rem;
+            }
+        }
+
+        /* Remove focus outline for mouse users */
+        .btn:focus:not(:focus-visible) {
+            outline: none;
+        }
+
+        /* Smooth transitions */
+        * {
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-print"></i> Cloud Printer</h1>
+            <p>Professional Document Printing Service</p>
+        </div>
+
+        <div class="card">
+            <!-- Progress Steps -->
+            <div class="progress-container">
+                <div class="progress-steps">
+                    <div class="progress-line" id="progressLine" style="width: 0%"></div>
+                    <div class="step active" id="step1">
+                        <div class="step-circle">1</div>
+                        <div class="step-label">Upload</div>
+                    </div>
+                    <div class="step" id="step2">
+                        <div class="step-circle">2</div>
+                        <div class="step-label">Copies & Price</div>
+                    </div>
+                    <div class="step" id="step3">
+                        <div class="step-circle">3</div>
+                        <div class="step-label">Payment</div>
+                    </div>
+                    <div class="step" id="step4">
+                        <div class="step-circle"><i class="fas fa-check"></i></div>
+                        <div class="step-label">Done</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Content -->
+            <div class="form-content">
+                <!-- Step 1: Upload & Select Printer -->
+                <div class="step-content active" id="content-step1">
+                    <h2 class="step-title">Upload Your Document</h2>
+                    <p class="step-description">Select a PDF file and choose your printer</p>
+
+                    <div class="upload-area" id="uploadArea">
+                        <div class="upload-icon">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                        </div>
+                        <div class="upload-text">Click to upload or drag and drop</div>
+                        <div class="upload-hint">PDF files up to 10MB</div>
+                        <input type="file" id="pdfFile" accept=".pdf" class="file-input">
+                    </div>
+
+                    <div class="selected-file" id="selectedFile">
+                        <i class="fas fa-file-pdf" style="color: var(--primary); font-size: 2rem;"></i>
+                        <div class="file-info">
+                            <div class="file-name" id="fileName"></div>
+                            <div class="file-meta">
+                                <span id="fileSize"></span> • <span id="filePages"></span>
+                            </div>
+                        </div>
+                        <button type="button" class="btn" id="removeFile" style="background: none; color: var(--error); padding: 0.5rem;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="printerName">Select Printer</label>
+                        <select id="printerName" class="form-control" required>
+                            <option value="">Choose a printer</option>
+                            <option value="Test-Printer">Test Printer</option>
+                            <option value="printer-01">Office Printer 01</option>
+                            <option value="printer-02">Office Printer 02</option>
+                            <option value="printer-03">Color Printer</option>
+                            <option value="HP-LaserJet-1020">HP LaserJet 1020</option>
+                            
+                        </select>
+                    </div>
+
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-primary" id="nextStep1" disabled>
+                            Next: Select Copies <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Step 2: Select Copies -->
+                <div class="step-content" id="content-step2">
+                    <h2 class="step-title">How Many Copies?</h2>
+                    <p class="step-description">Select the number of copies you need</p>
+
+                    <div class="copies-selector">
+                        <button type="button" class="copies-btn" id="decreaseCopies">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        <div class="copies-display" id="copiesDisplay">1</div>
+                        <button type="button" class="copies-btn" id="increaseCopies">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+
+                    <div class="pricing-card">
+                        <div class="pricing-row">
+                            <span class="pricing-label">Pages in PDF</span>
+                            <span class="pricing-value" id="pricingPages">-</span>
+                        </div>
+                        <div class="pricing-row">
+                            <span class="pricing-label">Price per Page</span>
+                            <span class="pricing-value">₹2</span>
+                        </div>
+                        <div class="pricing-row">
+                            <span class="pricing-label">Number of Copies</span>
+                            <span class="pricing-value" id="pricingCopies">1</span>
+                        </div>
+                        <div class="pricing-row">
+                            <span class="pricing-label">Total Amount</span>
+                            <span class="pricing-value">₹<span id="totalAmount">0</span></span>
+                        </div>
+                    </div>
+
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-secondary" id="backStep2">
+                            <i class="fas fa-arrow-left"></i> Back
+                        </button>
+                        <button type="button" class="btn btn-primary" id="nextStep2">
+                            Proceed to Payment <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Step 3: Payment -->
+                <div class="step-content" id="content-step3">
+                    <h2 class="step-title">Payment</h2>
+                    <p class="step-description">Review your order and make payment</p>
+
+                    <div class="success-details">
+                        <div class="detail-row">
+                            <span class="detail-label">Document</span>
+                            <span class="detail-value" id="summaryFile">-</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Printer</span>
+                            <span class="detail-value" id="summaryPrinter">-</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Pages</span>
+                            <span class="detail-value" id="summaryPages">-</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Copies</span>
+                            <span class="detail-value" id="summaryCopies">-</span>
+                        </div>
+                        <div class="detail-row" style="border-top: 2px solid var(--border); padding-top: 1rem; margin-top: 0.5rem;">
+                            <span class="detail-label" style="font-size: 1.125rem; font-weight: 700;">Total</span>
+                            <span class="detail-value" style="font-size: 1.5rem; color: var(--primary);">₹<span id="summaryTotal">0</span></span>
+                        </div>
+                    </div>
+
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-secondary" id="backStep3">
+                            <i class="fas fa-arrow-left"></i> Back
+                        </button>
+                        <button type="button" class="btn btn-success" id="payNowBtn">
+                            <i class="fas fa-lock"></i> Pay Now
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Step 4: Success -->
+                <div class="step-content" id="content-step4">
+                    <div class="success-content">
+                        <div class="success-icon">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <h2 class="step-title">Payment Successful!</h2>
+                        <p class="step-description">Your document has been sent to the printer</p>
+
+                        <div class="success-details">
+                            <div class="detail-row">
+                                <span class="detail-label">Job ID</span>
+                                <span class="detail-value" id="successJobId">-</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Document</span>
+                                <span class="detail-value" id="successFile">-</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Printer</span>
+                                <span class="detail-value" id="successPrinter">-</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Copies</span>
+                                <span class="detail-value" id="successCopies">-</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Amount Paid</span>
+                                <span class="detail-value" style="color: var(--success);">₹<span id="successAmount">0</span></span>
+                            </div>
+                        </div>
+
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-primary" id="printAnother">
+                                <i class="fas fa-plus"></i> Print Another Document
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div class="notification" id="notification">
+        <div class="notification-icon" id="notificationIcon">
+            <i class="fas fa-info-circle"></i>
+        </div>
+        <div>
+            <div id="notificationTitle" style="font-weight: 600; margin-bottom: 0.25rem;">Notification</div>
+            <div id="notificationMessage" style="font-size: 0.875rem; color: var(--secondary);"></div>
+        </div>
+    </div>
+
+    <script>
+        // State management
+        const state = {
+            currentStep: 1,
+            fileId: null,
+            originalName: null,
+            pageCount: 0,
+            printerName: '',
+            copies: 1,
+            amount: 0,
+            orderId: null,
+            jobId: null,
+            razorpayKey: ''
+        };
+
+        // DOM Elements
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('pdfFile');
+        const selectedFile = document.getElementById('selectedFile');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const filePages = document.getElementById('filePages');
+        const removeFileBtn = document.getElementById('removeFile');
+        const printerSelect = document.getElementById('printerName');
+        const nextStep1Btn = document.getElementById('nextStep1');
+        const decreaseCopiesBtn = document.getElementById('decreaseCopies');
+        const increaseCopiesBtn = document.getElementById('increaseCopies');
+        const copiesDisplay = document.getElementById('copiesDisplay');
+        const backStep2Btn = document.getElementById('backStep2');
+        const nextStep2Btn = document.getElementById('nextStep2');
+        const backStep3Btn = document.getElementById('backStep3');
+        const payNowBtn = document.getElementById('payNowBtn');
+        const printAnotherBtn = document.getElementById('printAnother');
+
+        // Upload area click
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        // File selection
+        fileInput.addEventListener('change', async (e) => {
+            if (e.target.files.length > 0) {
+                await handleFileSelect(e.target.files[0]);
+            }
+        });
+
+        // Remove selected file
+        removeFileBtn.addEventListener('click', () => {
+            fileInput.value = '';
+            selectedFile.classList.remove('show');
+            state.fileId = null;
+            state.pageCount = 0;
+            checkStep1Complete();
+            showNotification('File removed', 'File selection cleared', 'info');
+        });
+
+        // Drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('drag-over');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('drag-over');
+        });
+
+        uploadArea.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('drag-over');
+            
+            if (e.dataTransfer.files.length > 0) {
+                fileInput.files = e.dataTransfer.files;
+                await handleFileSelect(e.dataTransfer.files[0]);
+            }
+        });
+
+        // Handle file selection and upload
+        async function handleFileSelect(file) {
+            if (file.type !== 'application/pdf') {
+                showNotification('Invalid file type', 'Please select a PDF file', 'error');
+                return;
+            }
+
+            if (file.size > 10 * 1024 * 1024) {
+                showNotification('File too large', 'Maximum file size is 10MB', 'error');
+                return;
+            }
+
+            // Show file info
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+            filePages.textContent = 'Uploading...';
+            selectedFile.classList.add('show');
+
+            // Upload file
+            try {
+                const formData = new FormData();
+                formData.append('pdf', file);
+                formData.append('printerName', printerSelect.value || 'temp');
+
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    state.fileId = data.fileId;
+                    state.originalName = data.originalName;
+                    state.pageCount = data.pageCount;
+
+                    filePages.textContent = `${data.pageCount} pages`;
+                    showNotification('Upload successful', `${data.pageCount} pages detected`, 'success');
+                    checkStep1Complete();
+                } else {
+                    showNotification('Upload failed', data.error || 'Unknown error', 'error');
+                    selectedFile.classList.remove('show');
+                }
+            } catch (error) {
+                showNotification('Network error', 'Please check your connection', 'error');
+                selectedFile.classList.remove('show');
+            }
+        }
+
+        // Check if step 1 is complete
+        function checkStep1Complete() {
+            const isComplete = state.fileId && printerSelect.value;
+            nextStep1Btn.disabled = !isComplete;
+        }
+
+        printerSelect.addEventListener('change', (e) => {
+            state.printerName = e.target.value;
+            checkStep1Complete();
+        });
+
+        // Step navigation
+        nextStep1Btn.addEventListener('click', () => {
+            goToStep(2);
+            updatePricing();
+        });
+
+        backStep2Btn.addEventListener('click', () => goToStep(1));
+
+        nextStep2Btn.addEventListener('click', async () => {
+            await createOrder();
+        });
+
+        backStep3Btn.addEventListener('click', () => goToStep(2));
+
+        // Copies control
+        decreaseCopiesBtn.addEventListener('click', () => {
+            if (state.copies > 1) {
+                state.copies--;
+                updateCopiesDisplay();
+            }
+        });
+
+        increaseCopiesBtn.addEventListener('click', () => {
+            if (state.copies < 100) {
+                state.copies++;
+                updateCopiesDisplay();
+            }
+        });
+
+        function updateCopiesDisplay() {
+            copiesDisplay.textContent = state.copies;
+            updatePricing();
+        }
+
+        function updatePricing() {
+            const amount = (state.pageCount * 2) * state.copies;
+            state.amount = amount;
+
+            document.getElementById('pricingPages').textContent = state.pageCount;
+            document.getElementById('pricingCopies').textContent = state.copies;
+            document.getElementById('totalAmount').textContent = amount;
+
+            // Update summary
+            document.getElementById('summaryFile').textContent = state.originalName;
+            document.getElementById('summaryPrinter').textContent = state.printerName;
+            document.getElementById('summaryPages').textContent = state.pageCount;
+            document.getElementById('summaryCopies').textContent = state.copies;
+            document.getElementById('summaryTotal').textContent = amount;
+        }
+
+        // Create Razorpay order
+        async function createOrder() {
+            nextStep2Btn.disabled = true;
+            nextStep2Btn.innerHTML = '<div class="spinner"></div> Creating order...';
+
+            try {
+                const response = await fetch('/create-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        fileId: state.fileId,
+                        originalName: state.originalName,
+                        pageCount: state.pageCount,
+                        printerName: state.printerName,
+                        copies: state.copies
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    state.orderId = data.orderId;
+                    state.jobId = data.jobId;
+                    state.razorpayKey = data.key;
+
+                    goToStep(3);
+                    showNotification('Order created', 'Proceed to payment', 'success');
+                } else {
+                    showNotification('Order failed', data.error || 'Unknown error', 'error');
+                }
+            } catch (error) {
+                showNotification('Network error', 'Please check your connection', 'error');
+            } finally {
+                nextStep2Btn.disabled = false;
+                nextStep2Btn.innerHTML = 'Proceed to Payment <i class="fas fa-arrow-right"></i>';
+            }
+        }
+
+        // Process payment
+        payNowBtn.addEventListener('click', () => {
+            const options = {
+                key: state.razorpayKey,
+                amount: state.amount * 100,
+                currency: 'INR',
+                name: 'Cloud Printer',
+                description: `Print ${state.originalName}`,
+                order_id: state.orderId,
+                handler: async function (response) {
+                    await verifyPayment(response);
+                },
+                prefill: {
+                    name: 'User',
+                    email: 'user@example.com'
+                },
+                theme: {
+                    color: '#2563eb'
+                }
+            };
+
+            const rzp = new Razorpay(options);
+            rzp.open();
+        });
+
+        // Verify payment
+        async function verifyPayment(response) {
+            try {
+                const verifyResponse = await fetch('/verify-payment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        razorpay_order_id: response.razorpay_order_id,
+                        razorpay_payment_id: response.razorpay_payment_id,
+                        razorpay_signature: response.razorpay_signature,
+                        jobId: state.jobId
+                    })
+                });
+
+                const data = await verifyResponse.json();
+
+                if (data.success) {
+                    document.getElementById('successJobId').textContent = data.jobId;
+                    document.getElementById('successFile').textContent = state.originalName;
+                    document.getElementById('successPrinter').textContent = state.printerName;
+                    document.getElementById('successCopies').textContent = state.copies;
+                    document.getElementById('successAmount').textContent = state.amount;
+
+                    goToStep(4);
+                    showNotification('Payment successful!', 'Your document is being printed', 'success');
+                } else {
+                    showNotification('Payment verification failed', data.error, 'error');
+                }
+            } catch (error) {
+                showNotification('Verification error', 'Please contact support', 'error');
+            }
+        }
+
+        // Print another document
+        printAnotherBtn.addEventListener('click', () => {
+            location.reload();
+        });
+
+        // Step navigation
+        function goToStep(stepNumber) {
+            state.currentStep = stepNumber;
+
+            // Hide all steps
+            document.querySelectorAll('.step-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.step').forEach(el => {
+                el.classList.remove('active');
+                el.classList.remove('completed');
+            });
+
+            // Show current step
+            document.getElementById(`content-step${stepNumber}`).classList.add('active');
+            document.getElementById(`step${stepNumber}`).classList.add('active');
+
+            // Mark completed steps
+            for (let i = 1; i < stepNumber; i++) {
+                document.getElementById(`step${i}`).classList.add('completed');
+            }
+
+            // Update progress line
+            const progress = ((stepNumber - 1) / 3) * 100;
+            document.getElementById('progressLine').style.width = `${progress}%`;
+        }
+
+        // Helper functions
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        function showNotification(title, message, type) {
+            const notification = document.getElementById('notification');
+            const notificationTitle = document.getElementById('notificationTitle');
+            const notificationMessage = document.getElementById('notificationMessage');
+            const notificationIcon = document.getElementById('notificationIcon');
+            
+            notificationTitle.textContent = title;
+            notificationMessage.innerHTML = message;
+            
+            notification.className = 'notification';
+            notification.classList.add(type);
+            
+            const icon = notificationIcon.querySelector('i');
+            icon.className = type === 'success' ? 'fas fa-check-circle' :
+                            type === 'error' ? 'fas fa-exclamation-circle' :
+                            'fas fa-info-circle';
+            
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
